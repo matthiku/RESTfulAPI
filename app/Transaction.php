@@ -5,9 +5,12 @@ namespace App;
 use App\Buyer;
 use App\Product;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Transaction extends Model
 {
+    use SoftDeletes;
+    protected $dates = ['deleted_at'];
 
     // Mass assignement protection
     protected $fillable = [
@@ -19,13 +22,13 @@ class Transaction extends Model
 
     public function buyer()
     {
-        return $this->belongsToMany(Buyer::class);
+        return $this->belongsTo(Buyer::class);
     }
 
 
-    public function products()
+    public function product()
     {
-        return $this->belongsToMany(Product::class);
+        return $this->belongsTo(Product::class);
     }
 
 

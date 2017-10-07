@@ -3,17 +3,25 @@
 namespace App;
 
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
-    use Notifiable;
+    use Notifiable , SoftDeletes;
+    protected $dates = ['deleted_at'];
+
 
     const VERIFIED_USER = '1';
     const UNVERIFIED_USER = '0';
 
     const ADMIN_USER = 'true';
     const REGULAR_USER = 'false';
+
+
+    // needed so that Buyer and Seller models will inherit this
+    protected $table = 'users';
+
 
     /**
      * The attributes that are mass assignable.
@@ -41,10 +49,29 @@ class User extends Authenticatable
     ];
 
 
+    // define Mutator and Accessor for the name value
+    public function setNameAttribute($name)
+    {
+         $this->attributes['name'] = strtolower($name);
+    }
+    public function getNameAttribute($name)
+    {
+         return ucwords($name);
+    }
+
+    // define Mutator for the email value
+    public function setEmailAttribute($email)
+    {
+         $this->attributes['email'] = strtolower($email);
+    }
+
+
+
     public function isVerified()
     {
         return $this->verified == User::VERIFIED_USER;
     }
+
 
 
     public function isAdmin()
@@ -53,8 +80,10 @@ class User extends Authenticatable
     }
 
 
+
     public static function generateVerificationCode()
     {
         return str_random(40);
     }
+
 }

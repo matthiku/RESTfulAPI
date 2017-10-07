@@ -6,11 +6,21 @@ use App\Seller;
 use App\Category;
 use App\Transaction;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
+    use SoftDeletes;
+    protected $dates = ['deleted_at'];
+
+
     const UNAVAILABLE_PRODUCT = 'unavailable';
     const AVAILABLE_PRODUCT = 'available';
+
+
+    // remove unwanted attributes from the result set
+    protected $hidden = ['pivot'];
+
 
     // Mass assignement protection
     protected $fillable = [
@@ -21,6 +31,9 @@ class Product extends Model
         'image',
         'seller_id',
     ];
+
+
+
 
     public function isAvailable() {
         return $this->status == Product::AVAILABLE_PRODUCT;
@@ -35,7 +48,7 @@ class Product extends Model
 
     public function transactions()
     {
-        return $this->belongsToMany(Transaction::class);
+        return $this->hasMany(Transaction::class);
     }
 
 
