@@ -23,6 +23,13 @@ class DatabaseSeeder extends Seeder
     	Transaction::truncate();
     	DB::table('category_product')->truncate(); // has no model
 
+        // in order to avoid e.g. mass-sending of emails on each new account being created,
+        // disable any possible events in those models during the database seeding process
+        User::flushEventListeners();
+        Category::flushEventListeners();
+        Product::flushEventListeners();
+        Transaction::flushEventListeners();
+
     	$usersQuantity = 1000;
     	$categoriesQuantity = 30;
     	$productsQuantity = 1000;

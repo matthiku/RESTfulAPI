@@ -1,6 +1,9 @@
 <?php
 
+use App\User;
+use App\Mail\UserCreated;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,9 +39,19 @@ Route::resource('categories.transactions', 	'Category\CategoryTransactionControl
 Route::resource('categories.buyers', 		'Category\CategoryBuyerController',			['only' => ['index']]);
 
 Route::resource('products', 				'Product\ProductController', 				['only' => ['index', 'show']]);
+Route::resource('products.transactions',	'Product\ProductTransactionController',		['only' => ['index']]);
+Route::resource('products.buyers',			'Product\ProductBuyerController',			['only' => ['index', 'store']]);
+Route::resource('products.categories',		'Product\ProductCategoryController',		['only' => ['index', 'update', 'destroy']]);
+Route::resource('products.buyers.transactions','Product\ProductBuyerTransactionController',	['only' => ['store']]);
 
 Route::resource('transactions', 			'Transaction\TransactionController', 		['only' => ['index', 'show']]);
 Route::resource('transactions.categories', 	'Transaction\TransactionCategoryController',['only' => ['index']]);
 Route::resource('transactions.sellers', 	'Transaction\TransactionSellerController', 	['only' => ['index']]);
 
-Route::resource('users', 					'User\UserController', 						['except' => ['create', 'edit']]);
+Route::resource('users', 						   'User\UserController',				['except' => ['create', 'edit']]);
+Route::name('verify')->get('users/verify/{token}', 'User\UserController@verify');
+Route::name('resend')->get('users/{user}/resend',  'User\UserController@resend');
+
+Route::name('mail.welcome')->get('/mailable/{user}', function(User $user) {
+	return new App\Mail\UserCreated($user);
+});

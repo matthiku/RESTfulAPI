@@ -7,6 +7,8 @@ use App\Seller;
 use App\Product;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class SellerProductController extends ApiController
 {
@@ -44,7 +46,7 @@ class SellerProductController extends ApiController
         $data = $request->all();
 
         $data['status'] = Product::UNAVAILABLE_PRODUCT;
-        $data['image'] = '1.jpg';
+        $data['image'] = $request->image->store('');
         $data['seller_id'] = $seller->id;
 
         $product = Product::create($data);
@@ -60,7 +62,7 @@ class SellerProductController extends ApiController
      * @param  \App\Seller  $seller
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Seller $seller)
+    public function update(Request $request, Seller $seller, Product $product)
     {
         $rules = [
             'quantity' => 'integer|min:1',
@@ -71,13 +73,41 @@ class SellerProductController extends ApiController
 
         $this->checkSeller($seller, $product);
 
-        $product->fill($request->only())        
+        $product->fill(array_filter($request->only([
+            'name', 
+            'description', 
+            'quantity',
+        ])));
+
+        // if the change data contains an uploaded image, 
+        // delete the existing one and attach the new one to the product
+        if ($request->hasFile('image')) {
+            Storage::delete($product->image);
+            
+            $product->image = $request->image->store('');
+        }
+
+        if ($request->has('status')) {
+            $product->status = $request->status;
+
+            if ($product->isAvailable() && $product->categories->count() == 0) {
+                return $this->errorResponse('An active product must have at least one category', 409);
+            }
+        }
+
+        if ($product->isClean()) {
+            return $this->errorResponse('No attribute of this item was changed', 422);
+        }
+
+        // save and return the correctly modified product
+        $product->save();
+        return $this->showOne($product);
     }
 
     protected function checkSeller(Seller $seller, Product $product)
     {
-        if ($seller_id != $product->seller->id) {
-            throw new HttpException(422, "The speicified seller is not the actual seller of the product");
+        if ($seller->id != $product->seller->id) {
+            throw new HttpException(422, "The specified seller is not the actual seller of the product");
         }
     }
 
@@ -88,8 +118,17 @@ class SellerProductController extends ApiController
      * @param  \App\Seller  $seller
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Seller $seller)
+    public function destroy(Seller $seller, Product $product)
     {
-        //
+        // check if seller actually owns this product
+        $this->checkSeller($seller, $product);
+
+        // remove the file linked to this image
+        Storage::delete($product->image);
+
+        // now delete the actual product record
+        $product->delete();
+
+        return $this->showOne($product);
     }
 }

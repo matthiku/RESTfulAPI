@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\User;
 
 use App\User;
+use App\Mail\UserCreated;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\ApiController;
 
 class UserController extends ApiController
@@ -111,5 +113,35 @@ class UserController extends ApiController
         $user->delete();
         
         return $this->showOne($user);
+    }
+
+
+    // the user received an email with the verification token and clicked on the corresponding link
+    public function verify($token)
+    {
+        $user = User::where('verification_token', $token)->firstOrFail();
+        $user->verified = User::VERIFIED_USER;
+        $user->verification_token = null;
+        $user->save();
+
+        return $this->showMessage('This User account has been verfied successfully.');
+    }
+
+
+    // the user didn't receive the verification email and wants it again being sent
+    public function resend(User $user)
+    {
+        if ($user->isVerified()) {
+            return $this->errorResponse('the user is already verfied', 409);
+        }
+
+        // https://laravel.com/docs/5.5/helpers#method-retry
+        retry(5, 
+            function() use ($user) {
+                Mail::to($user)->send(new UserCreated($user));
+            }, 100
+        );
+
+        return $this->showMessage('A new verification email has been sent.');
     }
 }
