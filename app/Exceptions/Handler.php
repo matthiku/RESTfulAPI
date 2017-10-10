@@ -3,10 +3,22 @@
 namespace App\Exceptions;
 
 use Exception;
+use App\Traits\ApiResponser;
+use Illuminate\Database\QueryException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Session\TokenMismatchException;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 
 class Handler extends ExceptionHandler
 {
+    use ApiResponser;
+
     /**
      * A list of the exception types that are not reported.
      *
@@ -48,6 +60,59 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $exception)
     {
-        return parent::render($request, $exception);
+        if ($exception instanceof AuthenticationException) {
+            return $this->unauthenticated($request, $exception);
+        }
+        if ($exception instanceof AuthorizationException) {
+            return $this->errorResponse($exception->getMessage(), 403);
+        }
+        // the request contains a type (GET, PUT, POST etc) that is not used in this API
+        if ($exception instanceof MethodNotAllowedHttpException) {
+            return $this->errorResponse('The specified method for the request is invalid', 405);
+        }
+        // basically an invalid path in the request
+        if ($exception instanceof NotFoundHttpException) {
+            return $this->errorResponse('The specified URL cannot be found', 404);
+        }
+        // generic HTTP errors
+        if ($exception instanceof HttpException) {
+            return $this->errorResponse($exception->getMessage(), $exception->getStatusCode());
+        }
+        // with implicit model binding, we need to catch this error if the model id is not found
+        if ($exception instanceof ModelNotFoundException) {
+            $modelName = strtolower(class_basename($exception->getModel()));
+            return $this->errorResponse("Does not exists any {$modelName} with the specified identificator", 404);
+        }
+        if ($exception instanceof QueryException) {
+            $errorCode = $exception->errorInfo[1];
+            if ($errorCode == 1451) {
+                return $this->errorResponse('Cannot remove this resource permanently as it is related with another resource', 409);
+            }
+        }
+
+        // only return a full page of error information when we are in DEBUG mode (delvelopment)
+        if (config('app.debug')) {
+            return parent::render($request, $exception);            
+        }
+        // in production, just return a generic response
+        return $this->errorResponse('Unexpected Exception. Try later', 500);
     }
+
+
+    /**
+     * Convert an authentication exception into an unauthenticated response.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Auth\AuthenticationException  $exception
+     * @return \Illuminate\Http\Response
+     */
+    protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        if ($this->isFrontend($request)) {
+            return redirect()->guest('login');
+        }
+        return $this->errorResponse('Unauthenticated.', 401);
+    }
+
+
 }
