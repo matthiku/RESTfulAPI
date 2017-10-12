@@ -2,8 +2,11 @@
 
 namespace App\Traits;
 
-use Illuminate\Support\Collection;
+// use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 trait ApiResponser
 {
@@ -27,8 +30,18 @@ trait ApiResponser
 
 	protected function showAll(Collection $collection, $code = 200)
 	{
-		$collection = $this->sortData($collection);
-		return $this->successResponse(['data' => $collection], $code);
+		if (! $collection->isEmpty()) {
+
+			$transformer = $collection->first()->transformer;
+
+			$collection = $this->filterData($collection, $transformer);
+			$collection = $this->sortData($collection, $transformer);
+			$collection = $this->paginate($collection, $transformer);
+			
+			$collection = $this->transformData($collection, $transformer);
+		}
+		
+		return $this->successResponse($collection, $code);
 	}
 
 
@@ -36,13 +49,16 @@ trait ApiResponser
 	/**
 	 * Return JSON response for one model instance
 	 *
-     * @param  Model $model
+     * @param  Model $instance
      * @param  int $mcode
      * @return \Illuminate\Http\Response
 	 */
-	protected function showOne(Model $model, $code = 200)
+	protected function showOne(Model $instance, $code = 200)
 	{
-		return $this->successResponse(['data' => $model], $code);
+		$transformer = $instance->transformer;
+		$instance = $this->transformData($instance, $transformer);
+
+		return $this->successResponse($instance, $code);
 	}
 
 
@@ -58,20 +74,82 @@ trait ApiResponser
 
 
 
+
+
+	/**
+	 * transform data 
+	 */
+	protected function transformData($data, $transformer)
+	{
+		$transformation = fractal($data, new $transformer);
+
+		return $transformation->toArray();
+	}
+
+
 	
 
 	/**
-	 * return a simple message 
+	 * sort a colllection 
 	 */
-	protected function sortData(Collection $collection)
+	protected function sortData(Collection $collection, $transformer)
 	{
 		if (request()->has('sort_by')) {
-			$attribute = request()->sort_by;
-			$collection = $collection->sortBy($attribute);
+			$attribute = $transformer::OriginalAttribute(request()->sort_by);
+			$collection = $collection->sortBy->{$attribute};
 		}
 		return $collection;
 	}
 
+
+
+	
+
+	/**
+	 * sort a colllection 
+	 */
+	protected function filterData(Collection $collection, $transformer)
+	{
+		foreach (request()->query() as $query => $value) {
+			$attribute = $transformer::OriginalAttribute($query);
+			
+			if (isset($attribute, $value)) {
+				$collection = $collection->where($attribute, $value);
+			}
+		}
+		return $collection;
+	}
+
+
+	
+
+	/**
+	 * sort a colllection 
+	 */
+	protected function paginate(Collection $collection)
+	{
+		// make sure the URL params are valid
+		$rules = [
+			'per_page' => 'integer|min:2|max:50',
+		];
+		Validator::validate(request()->all(), $rules);
+
+		// establish the current page the request is on (default is 0)
+		$page = LengthAwarePaginator::resolveCurrentPage();
+		// how many records per page?
+		$perPage = request()->has('per_page') ? (int)request()->per_page : 15;
+
+		// get a 'slice' (recordset) with the number of records per page from the collection
+		$results = $collection->slice(($page - 1) * $perPage, $perPage)->values();
+		// now create the paginated array
+		$paginated = new LengthAwarePaginator($results, $collection->count(), $perPage, $page, [
+			'path' => LengthAwarePaginator::resolveCurrentPath(),
+		]);
+		// include other url and query params
+		$paginated->appends(request()->all());
+
+		return $paginated;
+	}
 
 
 
