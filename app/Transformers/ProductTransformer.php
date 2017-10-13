@@ -19,12 +19,35 @@ class ProductTransformer extends TransformerAbstract
             'title' => (string)$product->name,
             'details' => (string)$product->description,
             'stock' => (int)$product->quantity,
-            'situation' => (string)$product->status,
+            'status' => (string)$product->status,
             'picture' => url("img/{$product->image}"),
             'seller' => (int)$product->seller_id,
             'creationDate' => (string)$product->created_at,
             'lastChange' => (string)$product->updated_at,
             'deletedDate' => isset($product->deleted_at) ? (string) $product->deleted_at : null,
+
+            'links' => [
+                [
+                    'rel' => 'self',
+                    'href' => route('products.show', $product->id),
+                ],
+                [
+                    'rel' => 'product.buyers',
+                    'href' => route('products.buyers.index', $product->id),
+                ],
+                [
+                    'rel' => 'product.categories',
+                    'href' => route('products.categories.index', $product->id),
+                ],
+                [
+                    'rel' => 'product.transactions',
+                    'href' => route('products.transactions.index', $product->id),
+                ],
+                [
+                    'rel' => 'seller', 
+                    'href' => route('sellers.show', $product->seller_id),
+                ]
+            ]
         ];
     }
 
@@ -36,7 +59,7 @@ class ProductTransformer extends TransformerAbstract
             'title' => 'name',
             'details' => 'description',
             'stock' => 'quantity',
-            'situation' => 'status',
+            'status' => 'status',
             'picture' => 'image',
             'seller' => 'seller_id',
             'creationDate' => 'created_at',
