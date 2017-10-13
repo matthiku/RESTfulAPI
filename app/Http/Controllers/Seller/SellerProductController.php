@@ -7,11 +7,22 @@ use App\Seller;
 use App\Product;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ApiController;
+use App\Transformers\SellerTransformer;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class SellerProductController extends ApiController
 {
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // make validations work again with transformations
+        $this->middleware('transform.input:' . SellerTransformer::class)
+            ->only(['store', 'update']);
+    }
+
 
     /**
      * Display a listing of the resource.
