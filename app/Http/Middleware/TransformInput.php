@@ -34,12 +34,12 @@ class TransformInput
 
             $transformedErrors = [];
 
-            foreach ($data->errors as $field => $errorMsg) {
+            foreach ($data->error as $field => $errorMsg) {
                 $transformedField = $transformer::transformedAttribute($field);
                 $transformedErrors[$transformedField] = str_replace($field, $transformedField, $errorMsg);
             }
 
-            $data->errors = $transformedErrors;
+            $data->error = $transformedErrors;
 
             $response->setData($data);
         }

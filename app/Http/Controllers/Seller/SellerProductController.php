@@ -21,6 +21,8 @@ class SellerProductController extends ApiController
         // make validations work again with transformations
         $this->middleware('transform.input:' . SellerTransformer::class)
             ->only(['store', 'update']);
+
+        $this->middleware('scope:manage-products');
     }
 
 

@@ -48,6 +48,10 @@ Route::resource('transactions', 			'Transaction\TransactionController', 		['only
 Route::resource('transactions.categories', 	'Transaction\TransactionCategoryController',['only' => ['index']]);
 Route::resource('transactions.sellers', 	'Transaction\TransactionSellerController', 	['only' => ['index']]);
 
+
+/**
+ * USERS
+ */
 Route::resource('users', 						   'User\UserController',				['except' => ['create', 'edit']]);
 Route::name('verify')->get('users/verify/{token}', 'User\UserController@verify');
 Route::name('resend')->get('users/{user}/resend',  'User\UserController@resend');
@@ -55,3 +59,5 @@ Route::name('resend')->get('users/{user}/resend',  'User\UserController@resend')
 Route::name('mail.welcome')->get('/mailable/{user}', function(User $user) {
 	return new App\Mail\UserCreated($user);
 });
+
+Route::post('oauth/token', '\Laravel\Passport\Http\Controllers\AccessTokenController@issueToken');

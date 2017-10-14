@@ -20,6 +20,9 @@ class ProductBuyerTransactionController extends ApiController
         // make validations work again with transformations
         $this->middleware('transform.input:' . ProductTransformer::class)
             ->only(['store', 'update']);
+
+        // limit access to this by checking the token scopes
+        $this->middleware('scope:purchase-product')->only(['store']);
     }
 
 

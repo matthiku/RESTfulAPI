@@ -12,8 +12,12 @@ class CategoryController extends ApiController
 
     public function __construct()
     {
-        parent::__construct();
-
+        // protection
+        $this->middleware('client.credentials')
+            ->only(['index', 'show']);
+        // protection
+        $this->middleware('auth:api')
+            ->except(['index', 'show']);
         // make validations work again with transformations
         $this->middleware('transform.input:' . CategoryTransformer::class)
             ->only(['store', 'update']);

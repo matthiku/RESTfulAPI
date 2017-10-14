@@ -9,6 +9,12 @@ use App\Http\Controllers\ApiController;
 
 class ProductCategoryController extends ApiController
 {
+    public function __construct()
+    {
+        $this->middleware('client.credentials')->only(['index']);
+        $this->middleware('auth:api')->except(['index']);
+        $this->middleware('scope:manage-products')->only(['update', 'destroy']);
+    }
 
 
     /**
