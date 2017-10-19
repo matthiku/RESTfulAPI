@@ -20,6 +20,8 @@ class UserController extends ApiController
         // make validations work again with transformations
         $this->middleware('transform.input:' . UserTransformer::class)
             ->only(['store', 'update']);
+
+        $this->middleware('scope:manage-account')->only(['show', 'update']);
     }
 
     /**
